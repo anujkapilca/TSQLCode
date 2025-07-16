@@ -1,0 +1,54 @@
+SELECT *
+FROM INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_NAME = 'FIRM Report'
+
+
+
+DECLARE @CT INT = 1
+DECLARE @MAX INT 
+
+DECLARE @sqlCommand nvarchar(max)
+DECLARE @columnList varchar(75)
+declare @tablename varchar(200)
+declare @colname varchar(200)
+SET @tablename = '''FIRM REPORT'''
+print @tablename
+SET @sqlCommand = N'SELECT colUMN_NAME, ordinal_position FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ' + @tablename +''
+
+print @sqlcommand 
+
+drop table #temp2 
+
+
+SELECT
+colUMN_NAME, ORDINAL_POSITION into #TEMP2x from  
+INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'DHL Brokerage2'
+
+
+SELECT
+colUMN_NAME, ORDINAL_POSITION into #TEMP1 from  
+INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'firm Report'
+
+
+select * FROM #TEMP2x
+
+declare cur1 cursor 
+for 
+select column_name , ordinal_position from #temp2x
+declare @colvalue varchar(100), 
+@ordinal_position int 
+open cuR1
+fetch next from cur1 into 
+@colvalue, @ordinal_position
+while @@FETCH_STATUS =0
+begin
+DECLARE @sqlquery nvarchar(max) 
+set @sqlquery = N' select distinct + ' +@colvalue + ' from [dhl brokerage2]' 
+exec sp_executesql @sqlquery 
+fetch next FROM cur1 into 
+@colvalue, @ordinal_position
+end
+CLOSE CUR1 
+DEALLOCATE CUR1
+
+
