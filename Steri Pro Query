@@ -1,0 +1,66 @@
+--EXEC sp_addlinkedserver
+--    @server = 'Steripro',
+--    @srvproduct = 'Excel',
+--    @provider = 'Microsoft.ACE.OLEDB.12.0',
+--    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Steripro IS Creation Dec 28 2023\SteriPro QA Report.xlsx',
+--    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
+	
+	       DROP TABLE IF EXISTS steripro  
+		   SELECT * into steripro from OPENQUERY(Steripro,'select * from [SteriPro$]')  
+
+		   DROP TABLE IF EXISTS referencelist 
+		   SELECT REFERENCE, ROW_NUMBER() OVER (order by REFERENCE ) AS PID,TRIM(STUFF(REFERENCE,CHARINDEX('-',REFERENCE,1),LEN(REFERENCE),'')) as ref into referencelist FROM 
+		   (
+		   SELECT distinct reFERENCE  from OPENQUERY(Steripro,'select * from [SteriPro$]')   
+		   ) a
+
+
+
+DELETE FROM steripro 
+where reference is null 
+
+
+delete from referencelist 
+where reference is null 
+
+		declare @sqlquery nvarchar(max) , @reference nvarchar(max), @pid int , @ref nvarchar(max)
+		declare  curx cursor  for
+		select reference, pid , ref from referencelist 
+		begin
+		open curx
+		fetch next from curx into 
+		@reference , @pid, @ref 
+		while @@FETCH_STATUS=0
+		begin 
+
+		SELECT reference,TRIM(SUBSTRING([product/rec_name],2,9)) as sku, approved as quantity
+		from steripro
+		where reference =@reference
+
+		set @sqlquery = 
+		'SELECT reference,TRIM(SUBSTRING([product/rec_name],2,9)) as sku, approved as quantity INTO ['+@ref+
+		'] from steripro where reference = "'+@reference+'"'
+		print @sqlquery
+
+		exec sp_executesql @sqlquery
+		fetch next from curx into @reference, @pid, @ref 
+		end
+		close curx 
+		deallocate curx
+		end
+		
+
+		drop table if exists [dbo].[ABBOT KINNEY], [dbo].[AMERICANA], [dbo].[BETHESDA ROW], [chinook],
+		[dbo].[COVENT GARDEN],
+		[dbo].[DOMAIN],
+		[dbo].[FLATIRON],[dbo].[HAYES],[dbo].[KING'S ROAD],
+		[dbo].[KITSILANO]
+		,[dbo].[MARYLEBONE]
+		,[dbo].[MELROSE],[dbo].[MONTROSE], [dbo].[NASHVILLE], [dbo].[NEWBURY], [dbo].[OSSINGTON],
+		[dbo].[PARK ROYAL]
+,[dbo].[SANTANA ROW], [dbo].[SEAPORT], [dbo].[SPRING ST], [dbo].[U VILLAGE], [dbo].[UTC],
+[dbo].[WEST LOOP], [dbo].[WILLIAMSBURG], [dbo].[WYNWOOD]
+
+
+
+SET QUOTED_IDENTIFIER OFF;
