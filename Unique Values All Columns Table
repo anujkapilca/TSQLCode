@@ -1,54 +1,32 @@
-SELECT *
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'FIRM Report'
-
-
-
-DECLARE @CT INT = 1
-DECLARE @MAX INT 
-
-DECLARE @sqlCommand nvarchar(max)
-DECLARE @columnList varchar(75)
-declare @tablename varchar(200)
-declare @colname varchar(200)
-SET @tablename = '''FIRM REPORT'''
-print @tablename
-SET @sqlCommand = N'SELECT colUMN_NAME, ordinal_position FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = ' + @tablename +''
-
-print @sqlcommand 
-
-drop table #temp2 
-
-
-SELECT
-colUMN_NAME, ORDINAL_POSITION into #TEMP2x from  
-INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'DHL Brokerage2'
-
-
-SELECT
-colUMN_NAME, ORDINAL_POSITION into #TEMP1 from  
-INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'firm Report'
-
-
-select * FROM #TEMP2x
-
-declare cur1 cursor 
-for 
-select column_name , ordinal_position from #temp2x
-declare @colvalue varchar(100), 
-@ordinal_position int 
-open cuR1
-fetch next from cur1 into 
-@colvalue, @ordinal_position
-while @@FETCH_STATUS =0
+create proc distinctcols (@tablename nvarchar(max))
+as begin
+declare @sql1 nvarchar(max)
+drop table  if exists  resulttable
+set @sql1= N'select  ordinal_position, column_name into resulttable from
+information_schema.columns
+where table_name ='''+@tablename+''''
+print @sql1
+exec sp_executesql @sql1
+declare 
+@ordinal_position nvarchar(max), @column_name nvarchar(max)
+declare cur cursor for 
+select ordinal_position, column_name 
+from  resulttable 
+open cur
+fetch next from cur 
+into @ordinal_position, @column_name 
+while @@FETCH_STATUS=0
 begin
-DECLARE @sqlquery nvarchar(max) 
-set @sqlquery = N' select distinct + ' +@colvalue + ' from [dhl brokerage2]' 
-exec sp_executesql @sqlquery 
-fetch next FROM cur1 into 
-@colvalue, @ordinal_position
+declare @result nvarchar(max)
+select @result = N'select distinct ['+@column_name+'] into #table'+@column_name+' from ['+@tablename+']'
+print @result
+exec sp_executesql @result 
+fetch next from cur into
+@ordinal_position, @column_name
 end
-CLOSE CUR1 
-DEALLOCATE CUR1
+close cur
+deallocate cur
+end 
 
 
+exec distinctcols 'Firm Report 2022'
