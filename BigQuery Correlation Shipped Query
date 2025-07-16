@@ -1,0 +1,43 @@
+--CORRELATION QUERY  
+
+select distinct returns.datedifference, TOTALRETURNED, TOTALCOMPLETED, ROUND(totalreturned/totalcompleted,4)* 100 as returnVStotal from
+(
+select DATEDIFFERENCE, order_state, COUNT(*) as totalcompleted from
+(select order_completed_dt, order_shipped_Dt, DATE_DIFF(order_shipped_Dt,order_completed_dt, DAY ) AS datedifference,  order_sales_channel, order_state
+from `mejuri-gold.analytics.xa_order`
+where order_completed_dt between  '2023-04-01' and '2023-10-01'
+and order_state in ('complete') and order_sales_channel ='Web'
+) a where datedifference between 1 and 7
+GROUP BY DATEDIFFERENCE, order_state
+) returns
+inner join
+(
+select DATEDIFFERENCE, order_state, COUNT(*) as totalreturned from
+(select order_completed_dt, order_shipped_Dt, DATE_DIFF(order_shipped_Dt,order_completed_dt, DAY ) AS datedifference,  order_sales_channel, order_state
+from `mejuri-gold.analytics.xa_order`
+where order_completed_dt between  '2023-04-01' and '2023-10-01'
+and order_state in ('returned') and order_sales_channel ='Web'
+) a where datedifference between 1 and 7
+GROUP BY DATEDIFFERENCE, order_state
+) completed
+on returns.datedifference = completed.datedifference
+ORDER BY 1
+
+
+--DAY SHIPPED DAY ORDERED DIFFERENCE TIME 
+
+select * from
+(
+select distinct  dayordered, dayshipped, count(*) total
+from
+(
+select ORDER_KEY, order_completed_dt, order_shipped_Dt,FORMAT_DATE('%a', order_completed_dt) as dayordered , FORMAT_DATE('%a', order_shipped_Dt) as dayshipped, order_sales_channel,DATE_DIFF(order_shipped_Dt,order_completed_dt, DAY ) AS datedifference, order_state
+from `mejuri-gold.analytics.xa_order`
+where order_completed_dt between  '2023-07-01' and '2023-10-01'
+and order_state in ('complete') and order_sales_channel ='Web'
+and DATE_DIFF(order_shipped_Dt,order_completed_dt, DAY ) <=7
+) A GROUP BY dayordered, dayshipped
+) X
+PIVOT
+(
+sum(total) for dayshipped in ('Mon','Tue','Wed','Thu','Fri','Sat','Sun'))  b
