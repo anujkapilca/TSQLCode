@@ -4,24 +4,29 @@
 --    @provider = 'Microsoft.ACE.OLEDB.12.0',
 --    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Hallmarking Process\HallMarking Oct 16 2023\HallMarkingExport\HallMarking.xlsx',
 --    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
+	
 
 
 drop table if exists #hallmarkingunion 
-SELECT * INTO #hallmarkingunion from OPENQUERY(HallMarkingOct162023,'select * from [RETAIL-21JUN2024$]')  
 
-	drop table if exists #result 
-	select *  into #result from 
-	(
-	select  REFERENCE, [inputs/quantity],	[inputs/product/name],	[inputs/product/cost_price],	[inputs/product/country_of_origin/name],	
+select * INTO #hallmarkingunion  from OPENQUERY(HallMarkingOct162023,'select * from [ECOMM-21JUN2024$]')
+
+
+drop table if exists #result 
+
+select *  into #result from ( select  REFERENCE, [inputs/quantity],	[inputs/product/name],	[inputs/product/cost_price],	[inputs/product/country_of_origin/name],	
 	case when [product/hs_code] LIKE '%.19%' THEN '7113.19.5090' 
-         else [product/hs_code] end as [product/hs_code],	
-	[product/code],	[inputs/product/weight],ROUND([inputs/quantity]*[inputs/product/cost_price],2) as total, CASE  When ([inputs/product/name] LIKE '%Earring%' 
+        else [product/hs_code] end as [product/hs_code]
+
+	,[product/code],[inputs/product/weight],ROUND([inputs/quantity]*[inputs/product/cost_price],2) as total, CASE  When ([inputs/product/name] LIKE '%Earring%' 
 				   or [inputs/product/name] LIKE '%hoops%'
 				   or [inputs/product/name] LIKE '%Huggies%'
 				   or [inputs/product/name] LIKE '%studs%')
 				   THEN [inputs/quantity] *2
 				   ELSE [inputs/quantity] END AS [Assay Office Quantity],
-	CASE   When ([inputs/product/name] LIKE '%Necklace%' or [inputs/product/name] LIKE '%Choker%') and substring([product/hs_code],6,2) ='19' then 'N' 
+	
+	
+			CASE   When ([inputs/product/name] LIKE '%Necklace%' or [inputs/product/name] LIKE '%Choker%') and substring([product/hs_code],6,2) ='19' then 'N' 
 	               When ([inputs/product/name] LIKE '%Necklace%' or [inputs/product/name] LIKE '%Choker%') and substring([product/hs_code],6,2) ='11' then 'SN'
 				   When ([inputs/product/name] LIKE '%Ring%' and [inputs/product/name] not like '%earring%') and substring([product/hs_code],6,2) ='19' then 'R' 
 				   When ([inputs/product/name] LIKE '%Band%' and [inputs/product/name] not like '%earring%') and substring([product/hs_code],6,2) ='19' then 'R'
@@ -46,7 +51,8 @@ SELECT * INTO #hallmarkingunion from OPENQUERY(HallMarkingOct162023,'select * fr
 			   from #hallmarkingunion
    ) a
  
-		
+		select * from #result
+
 	DROP TABLE IF EXISTS #pivot1
 				   
 		SELECT  [inputs/product/country_of_origin/name],[product/hs_code], 
@@ -59,12 +65,29 @@ SELECT * INTO #hallmarkingunion from OPENQUERY(HallMarkingOct162023,'select * fr
 		(([product/hs_code],[inputs/product/country_of_origin/name]), ([inputs/product/country_of_origin/name]),() )
 		order by 1,3
 
+
+
+	
+	
+
+
+	declare @totalsum int 
+	SELECT @totalsum = [sum of inputs/quantity] 
+	FROM #pivot1 
+	where [inputs/product/country_of_origin/name] is null and [product/hs_code] is null 
+
+	drop table if exists #dhlweights 
+	SELECT *,iif(substring([product/hs_code],6,2)='19','Gold','Silver') as metalTYPE , round(weight/[sum of inputs/quantity],5) as weightperunit into #dhlweights from 
+	(
+	select *, ROUND(([Sum of inputs/quantity]/@totalsum)*2,2)  AS WEIGHT ,
+	ROUND([SUM OF TOTAL]/[SUM OF INPUTS/QUANTITY],2) AS UNITVALUE from #pivot1 p
+	)A
+	where [product/hs_code] is not null and [inputs/product/country_of_origin/name] is not null
+ORDER BY 1 DESC, 2 DESC 
+
 drop table if exists COUNTRYCODES 
 SELECT * INTO COUNTRYCODES from OPENQUERY(HallMarkingOct162023,'select * from [CountryCodes$]')  
 
-
-DROP TABLE IF EXISTS BULKLOADS 
-SELECT * INTO BULKLOADS from OPENQUERY(HallMarkingOct162023,'select * from [BULKLOAD$]')  
 
 drop table if exists bulkuploadrows
 select 'D'+Ctrycode as detailheader,
@@ -86,39 +109,38 @@ quantity,space(8),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%silver%'
 AND LEN(QUANTITY)=2
-union
+union all
 SELECT concat(detailheader,space(20),coo,space(30),convert(varchar,hscode),space(22),
 desval,space(284),
 quantity,space(7),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%silver%'
 AND LEN(QUANTITY)=3
-UNION
+UNION all
 SELECT concat(detailheader,space(20),coo,space(30),convert(varchar,hscode),space(22),
-desval,space(285),
-quantity,space(8),MEASURE,SPACE(50),[value])
+desval,space(284),
+quantity,space(9),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%silver%'
 AND LEN(QUANTITY)=1
-UNION
+UNION ALL
 SELECT concat(detailheader,space(20),coo,space(30),convert(varchar,hscode),space(22),
 desval,space(277),
 quantity,space(8),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%gold%'
 AND LEN(QUANTITY)=2
-union
+union all
 SELECT concat(detailheader,space(20),coo,space(30),convert(varchar,hscode),space(22),
 desval,space(277),
 quantity,space(7),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%gold%'
 AND LEN(QUANTITY)=3
-union
+union all
 SELECT concat(detailheader,space(20),coo,space(30),convert(varchar,hscode),space(22),
 desval,space(278),
 quantity,space(8),MEASURE,SPACE(50),[value])
 FROM bulkuploadrows
 where desval like '%gold%'
 AND LEN(QUANTITY)=1
-
