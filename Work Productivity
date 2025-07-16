@@ -1,0 +1,181 @@
+--EXEC sp_addlinkedserver
+--    @server = 'WorkProductivity',
+--    @srvproduct = 'Excel',
+--    @provider = 'Microsoft.ACE.OLEDB.12.0',
+--    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Work Productivity Project July 27 2023\work Productivity Excel\Work Productivity.xlsx',
+--    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
+
+	
+	SELECT DISTINCT [PACKER/NAME] FROM [Packing]
+
+	DROP TABLE IF EXISTS FCWorkHoursdata
+	select * INTO FCWorkHoursdata from OPENQUERY(WorkProductivity,'select * from [Department Detail Report$]') 
+		where [payroll pay date] between dateadd(D,-14,[payroll pay date]) and [payroll pay date] 
+
+	DROP TABLE IF EXISTS TimeCarddata
+	select * INTO TimeCarddata from OPENQUERY(WorkProductivity,'select * from [Timecards$]') 
+			where [ In date time_] between dateadd(D,-14,[ In date time_]) and [ In date time_]  
+	DROP TABLE IF EXISTS [Packing]
+	select * INTO [Packing]  from OPENQUERY(WorkProductivity,'select * from [Packing$]') 
+
+
+	
+	DROP TABLE IF EXISTS WorkstationMapping
+	select * INTO WorkstationMapping  from OPENQUERY(WorkProductivity,'select * from [WorkstationMapping$]') 
+
+
+alter table packing  
+add  pkey int identity(1,1)
+
+
+UPDATE p 
+set P.[PACKER/NAME] = W.[NAME] 
+FROM PACKING P
+INNER JOIN workstationmapping  W
+ON P.[PACKER/NAME] = w.workstationupdate 
+
+DROP TABLE IF EXISTS [Packed Productivity Fulfil]
+select *, iif(number is null,null,pkey) as pkey2  into [Packed Productivity Fulfil] from packing 
+
+
+UPDATE tresult
+SET number = (
+    SELECT TOP 1 number
+    FROM [Packed Productivity Fulfil] As T1
+    WHERE number IS NOT NULL
+    AND tresult.pkey > T1.pkey
+    ORDER BY pkey DESC
+    ) ,
+	[packer/name] = (
+    SELECT TOP 1 [packer/name]
+    FROM [Packed Productivity Fulfil] As T1
+    WHERE [packer/name] IS NOT NULL
+    AND tresult.pkey > T1.pkey
+    ORDER BY pkey DESC
+    ),
+	PACKED_AT = (
+    SELECT TOP 1 PACKED_AT
+    FROM [Packed Productivity Fulfil] As T1
+    WHERE PACKED_AT IS NOT NULL
+    AND tresult.pkey > T1.pkey
+    ORDER BY pkey DESC
+	) FROM [Packed Productivity Fulfil] AS TRESULT
+	WHERE PKEY2 IS NULL
+
+	drop table if exists #tempxstep1
+select DISTINCT [ Employee name_], converT(date, left([ in date time_],11)) as dt, [ Job/Absence_], round([ Hours_],2) as [ Hours_],'Packing' as area , 'temp' as emptype into #tempxstep1  from TimeCarddata
+where trim([ Job/Absence_]) = 'Packing - Customer Orders'
+AND [ Hours_] <>0
+union all
+select DISTINCT CONCAT([First Name],' ',[Last Name]) as [payroll name], [payroll pay date], [worked work area], round([hours],2) as [hours],'Packing' as area ,'fulltime' as emptype from FCWorkHoursdata
+where [pay code] in('Regular','overtime')
+and trim([Worked WORK AREA]) = 'Packing - Customer Orders'
+or trim([Worked WORK AREA]) ='Packing- Customer Orders'
+
+
+select distinct [ Employee name_] from #tempxstep1
+
+drop table if exists #tempxstep2 
+select [ employee name_], dt, sum([ Hours_]) as [ Hours_], area, emptype into #tempxstep2 
+from #tempxstep1
+group by [ employee name_], dt, area ,emptype
+
+drop table  IF EXISTS #tempx
+select main.[ employee name_], temp.dt,temp.[ Job/Absence_], main.[ Hours_], main.AREA, MAIN.EMPTYPE into #tempx   from #tempxstep1 temp 
+inner join #tempxstep2 main
+on temp.[ Employee name_] = main.[ Employee name_]
+and temp.dt = main.dt 
+
+
+
+drop table if exists #fulfildw 
+
+
+select [packer/name] as [Packer],	sum([inventory_moves/quantity]) as [Units Packed], 
+count(distinct number) as ordercount, 
+round(sum([inventory_moves/quantity])/count(distinct number),2) as unitsperorder,
+convert(date, packed_at, 101) as dt into #fulfildw
+from [Packed Productivity Fulfil] 
+group by [packer/name], convert(date, packed_at, 101)
+
+update #fulfildw
+set [packer] ='Brian Da Costa'
+where [packer] ='Brian  Da Costa'
+
+update #fulfildw
+set [packer] = 'Irish Ramal'
+where [packer] = 'irish.ramal'
+
+--update #fulfildw
+--set [packer] = 'Steff Vilvar'
+--where [packer] = 'Stefhani Vilvar'
+
+SELECT * FROM #fulfildw
+
+
+
+
+DROP TABLE IF EXISTS #RESULT 
+SELECT distinct F.Packer, F.[Units Packed],ordercount,unitsperorder,F.dt, t.[ Hours_], round([Units Packed]/[ Hours_],2) as UnitsPerHour,
+case when emptype='fulltime' then t.[ Hours_]- 0.75
+when emptype='temp' then t.[ Hours_] end as HoursMinus45,
+case when emptype ='fulltime' then round([Units Packed]/[ Hours_]-0.75,2)
+when emptype ='temp' then round([Units Packed]/[ Hours_],2) end as UnitsPerHourMinus45,t.area, t.emptype into #result  FROM #fulfildw F
+inner join #tempx t 
+on F.Packer  = t.[ Employee name_]
+and f.dt = t.dt
+
+
+SELECT * FROM #RESULT
+
+	
+ Drop table if exists workproductivityPacking
+ select  * into workproductivityPacking from #result 
+
+ select * from workproductivityPacking
+
+
+ DROP TABLE IF EXISTS #PACKINGREPORT 
+ select DISTINCT A.packer,a.dt,  a.[Units Packed],ordercount,unitsperorder, a.[ Hours_], a.UnitsPerHour,a.HoursMinus45,a.UnitsPerHourMinus45, averageUnitsPerHour,maxUnitsPerHour, minUnitsPerhour,a.area INTO #PACKINGREPORT from workproductivityPacking A  
+ inner join 
+ (
+ select DISTINCT AREA,dt, ROUND(AVg(unitsperhour),2) as averageUnitsPerHour,
+        max(unitsperhour) as maxUnitsPerHour, 
+		min(unitsperhour) as minUnitsPerhour from workproductivityPacking
+
+		GROUP BY AREA ,dt
+		) B 
+		ON B.AREA = A.AREA 
+		and A.DT = B.DT 
+		ORDER BY 5 
+
+		
+ drop table if exists #10days
+ select distinct dt into #10days from #packingreport 
+
+ DROP TABLE IF EXISTS PACKINGREPORT 
+ SELECT * INTO PACKINGREPORT FROM #PACKINGREPORT 
+ WHERE DT IN ( select dt from 
+ (
+ SELECT DT, ROW_NUMBER() OVER (ORDER BY DT DESC) PID FROM #10days 
+)A  where pid BETWEEN 1 AND 10 
+)
+
+
+		SELECT DISTINCT * FROM PACKINGREPORT 
+
+		DROP TABLE IF EXISTS pAckingsummary
+		select dt, MAX(AREA) AS AREA, SUM([Units Packed]) AS TOTALUNITS, SUM(ORDERCOUNT) AS TOTALORDERS, AVG(averageUnitsPerHour) AS AverageUnitsPerHour, MAX(UNITSPERHOUR) as MaxUnitsPherour, MIN(UNITSPERHOUR) as MINUnitsPerHOUR  
+		INTO pAckingsummary from PACKINGREPORT
+		WHERE DT IN ( select dt from 
+ (
+ SELECT DT, ROW_NUMBER() OVER (ORDER BY DT DESC) PID FROM #10days 
+)A  where pid BETWEEN 1 AND 10 
+)
+		group by dt
+
+		select * from packingsummary 
+
+		drop table if exists packinganalysis 
+		select dt, packer, unitsperhour , row_number() over (partition by dt order by unitsperhour desc) as pid
+		INTO packingAnalysis from PACKINGREPORT
