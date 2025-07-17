@@ -4,32 +4,27 @@ EXEC sp_addlinkedserver
     @provider = 'Microsoft.ACE.OLEDB.12.0',
     @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Jenn Requests\Zipcode Range.xlsx',
     @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
-	
-	
-	
 
-	DROP TABLE IF EXISTS #RESULT 
-	SELECT  *,convert(int,left([post code],3)) as firstzip, convert(int,right([post code],3)) as lastzip INTO #RESULT FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
-	where len([post code])  =7
-	UNION all
-	SELECT  *,convert(int,left([post code],4)), convert(int,right([post code],4)) FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
-	where len([post code])  =9
+DROP TABLE IF EXISTS #RESULT 
+SELECT  *,convert(int,left([post code],3)) as firstzip, convert(int,right([post code],3)) as lastzip INTO #RESULT FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
+where len([post code])  =7
+UNION all
+SELECT  *,convert(int,left([post code],4)), convert(int,right([post code],4)) FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
+where len([post code])  =9
 
-	select * from #result
+select * from #result
 
-
-
-	declare @zip int, @firstzip int, @lastzip int , @postcode varchar(20), @zone varchar(20), @num nvarchar(20)
-	declare cur cursor for 
-	select [post code], zone, [#], firstzip, lastzip
-	from #result
-	begin
-	open cur 
-	fetch next from cur into 
-	@postcode, @zone, @num , @firstzip, @lastzip 
-	while @@FETCH_STATUS=0
-	begin
-	 while @firstzip <= @lastzip 
+declare @zip int, @firstzip int, @lastzip int , @postcode varchar(20), @zone varchar(20), @num nvarchar(20)
+declare cur cursor for 
+select [post code], zone, [#], firstzip, lastzip
+from #result
+begin
+open cur 
+fetch next from cur into 
+@postcode, @zone, @num , @firstzip, @lastzip 
+while @@FETCH_STATUS=0
+begin
+	  while @firstzip <= @lastzip 
 	  begin 
 	  INSERT INTO resulttable
 	  select [post code], [zone], [#], @firstzip
@@ -37,24 +32,22 @@ EXEC sp_addlinkedserver
 	  where [post code] = @postcode
 	  SET @FIRSTzip = @firstzip+1
 	  end
-		fetch next from cur into 
-	@postcode, @zone, @num , @firstzip, @lastzip 
-	end
-	close cur
-	deallocate cur 
-	end 
+fetch next from cur into 
+@postcode, @zone, @num , @firstzip, @lastzip 
+end
+close cur
+deallocate cur 
+end 
 
 select distinct * from resulttable
 ORDER BY 1 
-	
-	alter table resulttable 
-	drop column lastzip 
 
-
+alter table resulttable 
+drop column lastzip 
 	
-	SELECT distinct *, [POST CODE] AS [FIRST ZIP] FROM   OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
-	WHERE LEN([POST CODE]) IN(3,4)
-	UNION all
-	SELECT distinct * FROM resulttable
+SELECT distinct *, [POST CODE] AS [FIRST ZIP] FROM   OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
+WHERE LEN([POST CODE]) IN(3,4)
+UNION all
+SELECT distinct * FROM resulttable
 	
 select * FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
