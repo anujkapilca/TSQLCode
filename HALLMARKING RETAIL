@@ -7,8 +7,7 @@
 	
 
 
-	drop table if exists #hallmarkingunion 
-
+drop table if exists #hallmarkingunion 
 
 select * INTO #hallmarkingunion  from OPENQUERY(HallMarkingOct162023,'select * from [ECOMM-21JUN2024$]')
 
@@ -56,16 +55,16 @@ select * INTO #hallmarkingunion  from OPENQUERY(HallMarkingOct162023,'select * f
  
 		
 drop table if exists #goldresult
-	 select distinct [inputs/product/country_of_origin/name]  into #goldresult
-	 from #result 
+select distinct [inputs/product/country_of_origin/name]  into #goldresult
+from #result 
 
 
-	 declare @ref varchar(1000)
+declare @ref varchar(1000)
 select @ref = reference from #result 
-	 print @ref
+print @ref
 	  
-	 	declare @gold varchar(100), @silver varchar(100)
-	 SELECT  @gold =
+declare @gold varchar(100), @silver varchar(100)
+SELECT  @gold =
 COALESCE(@gold+ ' ','') +  [inputs/product/country_of_origin/name]
 from #goldresult 
 	print @gold 
