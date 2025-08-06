@@ -51,8 +51,7 @@ select *  into #result from ( select  REFERENCE, [inputs/quantity],	[inputs/prod
 			   from #hallmarkingunion
    ) a
  
-		select * from #result
-
+		
 	DROP TABLE IF EXISTS #pivot1
 				   
 		SELECT  [inputs/product/country_of_origin/name],[product/hs_code], 
@@ -66,8 +65,6 @@ select *  into #result from ( select  REFERENCE, [inputs/quantity],	[inputs/prod
 		order by 1,3
 
 
-
-	
 	
 
 
