@@ -1,12 +1,4 @@
---EXEC sp_addlinkedserver
---    @server = 'WorkProductivity',
---    @srvproduct = 'Excel',
---    @provider = 'Microsoft.ACE.OLEDB.12.0',
---    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Work Productivity Project July 27 2023\work Productivity Excel\Work Productivity.xlsx',
---    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
 
-	
-	SELECT DISTINCT [PACKER/NAME] FROM [Packing]
 
 	DROP TABLE IF EXISTS FCWorkHoursdata
 	select * INTO FCWorkHoursdata from OPENQUERY(WorkProductivity,'select * from [Department Detail Report$]') 
@@ -17,7 +9,6 @@
 			where [ In date time_] between dateadd(D,-14,[ In date time_]) and [ In date time_]  
 	DROP TABLE IF EXISTS [Packing]
 	select * INTO [Packing]  from OPENQUERY(WorkProductivity,'select * from [Packing$]') 
-
 
 	
 	DROP TABLE IF EXISTS WorkstationMapping
@@ -87,17 +78,12 @@ and temp.dt = main.dt
 
 
 
-
-
 select [packer/name] as [Packer],	sum([inventory_moves/quantity]) as [Units Packed], 
 count(distinct number) as ordercount, 
 round(sum([inventory_moves/quantity])/count(distinct number),2) as unitsperorder,
 convert(date, packed_at, 101) as dt into #fulfildw
 from [Packed Productivity Fulfil] 
 group by [packer/name], convert(date, packed_at, 101)
-
-
-
 
 
 DROP TABLE IF EXISTS #RESULT 
@@ -144,7 +130,7 @@ and f.dt = t.dt
 		select dt, MAX(AREA) AS AREA, SUM([Units Packed]) AS TOTALUNITS, SUM(ORDERCOUNT) AS TOTALORDERS, AVG(averageUnitsPerHour) AS AverageUnitsPerHour, MAX(UNITSPERHOUR) as MaxUnitsPherour, MIN(UNITSPERHOUR) as MINUnitsPerHOUR  
 		INTO pAckingsummary from PACKINGREPORT
 		WHERE DT IN ( select dt from 
- (
+ (x
  SELECT DT, ROW_NUMBER() OVER (ORDER BY DT DESC) PID FROM #10days 
 )A  where pid BETWEEN 1 AND 10 
 )
