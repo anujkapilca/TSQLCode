@@ -1,10 +1,3 @@
-EXEC sp_addlinkedserver
-    @server = 'ZipCodeRange',
-    @srvproduct = 'Excel',
-    @provider = 'Microsoft.ACE.OLEDB.12.0',
-    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Jenn Requests\Zipcode Range.xlsx',
-    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
-
 DROP TABLE IF EXISTS #RESULT 
 SELECT  *,convert(int,left([post code],3)) as firstzip, convert(int,right([post code],3)) as lastzip INTO #RESULT FROM  OPENQUERY(ZipCodeRange,'select * from [Zip Code List$]') 
 where len([post code])  =7
