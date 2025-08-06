@@ -73,7 +73,6 @@ and trim([Worked WORK AREA]) = 'Packing - Customer Orders'
 or trim([Worked WORK AREA]) ='Packing- Customer Orders'
 
 
-select distinct [ Employee name_] from #tempxstep1
 
 drop table if exists #tempxstep2 
 select [ employee name_], dt, sum([ Hours_]) as [ Hours_], area, emptype into #tempxstep2 
@@ -88,7 +87,6 @@ and temp.dt = main.dt
 
 
 
-drop table if exists #fulfildw 
 
 
 select [packer/name] as [Packer],	sum([inventory_moves/quantity]) as [Units Packed], 
@@ -98,19 +96,6 @@ convert(date, packed_at, 101) as dt into #fulfildw
 from [Packed Productivity Fulfil] 
 group by [packer/name], convert(date, packed_at, 101)
 
-update #fulfildw
-set [packer] ='Brian Da Costa'
-where [packer] ='Brian  Da Costa'
-
-update #fulfildw
-set [packer] = 'Irish Ramal'
-where [packer] = 'irish.ramal'
-
---update #fulfildw
---set [packer] = 'Steff Vilvar'
---where [packer] = 'Stefhani Vilvar'
-
-SELECT * FROM #fulfildw
 
 
 
@@ -125,14 +110,9 @@ inner join #tempx t
 on F.Packer  = t.[ Employee name_]
 and f.dt = t.dt
 
-
-SELECT * FROM #RESULT
-
 	
  Drop table if exists workproductivityPacking
  select  * into workproductivityPacking from #result 
-
- select * from workproductivityPacking
 
 
  DROP TABLE IF EXISTS #PACKINGREPORT 
@@ -160,10 +140,6 @@ SELECT * FROM #RESULT
  SELECT DT, ROW_NUMBER() OVER (ORDER BY DT DESC) PID FROM #10days 
 )A  where pid BETWEEN 1 AND 10 
 )
-
-
-		SELECT DISTINCT * FROM PACKINGREPORT 
-
 		DROP TABLE IF EXISTS pAckingsummary
 		select dt, MAX(AREA) AS AREA, SUM([Units Packed]) AS TOTALUNITS, SUM(ORDERCOUNT) AS TOTALORDERS, AVG(averageUnitsPerHour) AS AverageUnitsPerHour, MAX(UNITSPERHOUR) as MaxUnitsPherour, MIN(UNITSPERHOUR) as MINUnitsPerHOUR  
 		INTO pAckingsummary from PACKINGREPORT
@@ -174,7 +150,7 @@ SELECT * FROM #RESULT
 )
 		group by dt
 
-		select * from packingsummary 
+
 
 		drop table if exists packinganalysis 
 		select dt, packer, unitsperhour , row_number() over (partition by dt order by unitsperhour desc) as pid
