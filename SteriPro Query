@@ -1,10 +1,4 @@
---EXEC sp_addlinkedserver
---    @server = 'Steripro',
---    @srvproduct = 'Excel',
---    @provider = 'Microsoft.ACE.OLEDB.12.0',
---    @datasrc = 'C:\Users\Anuj Kapil\OneDrive - Ontario\Desktop\Steripro IS Creation Dec 28 2023\SteriPro QA Report.xlsx',
---    @provstr = 'Excel 12.0;IMEX=1;HDR=YES;'
-	
+
 	       DROP TABLE IF EXISTS steripro  
 		   SELECT * into steripro from OPENQUERY(Steripro,'select * from [SteriPro$]')  
 
