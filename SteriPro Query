@@ -44,17 +44,4 @@ where reference is null
 		end
 		
 
-		drop table if exists [dbo].[ABBOT KINNEY], [dbo].[AMERICANA], [dbo].[BETHESDA ROW], [chinook],
-		[dbo].[COVENT GARDEN],
-		[dbo].[DOMAIN],
-		[dbo].[FLATIRON],[dbo].[HAYES],[dbo].[KING'S ROAD],
-		[dbo].[KITSILANO]
-		,[dbo].[MARYLEBONE]
-		,[dbo].[MELROSE],[dbo].[MONTROSE], [dbo].[NASHVILLE], [dbo].[NEWBURY], [dbo].[OSSINGTON],
-		[dbo].[PARK ROYAL]
-,[dbo].[SANTANA ROW], [dbo].[SEAPORT], [dbo].[SPRING ST], [dbo].[U VILLAGE], [dbo].[UTC],
-[dbo].[WEST LOOP], [dbo].[WILLIAMSBURG], [dbo].[WYNWOOD]
-
-
-
-SET QUOTED_IDENTIFIER OFF;
+	
